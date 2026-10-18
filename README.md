@@ -1,123 +1,98 @@
-# Sistema de Agendamento de Consultas / Appointment Scheduling System
+# sistema-agendamento-consultas
 
-Agendamento de consultas médicas com Java Spring Boot 3 (backend) e React/TypeScript + Tailwind (frontend).
-Medical appointment scheduling with Java Spring Boot 3 (backend) and React/TypeScript + Tailwind (frontend).
+![Java 21](https://img.shields.io/badge/Java-21-%23007396?style=flat-square)   ![status: concluido](https://img.shields.io/badge/status-concluido-green)   ![licenca: MIT](https://img.shields.io/badge/licenca-MIT-blue)
 
-Autor / Author: Kelvin Oliveira
-Licença / License: MIT
+## Resumo
 
----
+API REST em Java 21 com Spring Boot 3.4.3, desenvolvida como estudo de arquitetura de software. Projeto funcional, sistema-agendamento-consultas
 
-## 🇧🇷 Português (PT-BR)
+## Problema / por que existe
 
-### Descrição
-Sistema full-stack MVP para agendamento, listagem e cancelamento de consultas médicas. O backend expõe uma API REST em Java 21 com Spring Boot 3, Spring Data JPA e Jakarta Validation, persistindo em H2 (banco embutido). O frontend é uma aplicação React 18 com TypeScript e Tailwind CSS, construída com Vite.
+Em aplicacoes pequenas, regras de negocio, validacao, persistencia e notificacao costumam ficar misturadas em uma unica camada de servico. Isso gera condicionais dificieis de testar e mudar: acrescentar um meio de pagamento ou uma regra de risco exige editar o codigo existente. O projeto isola cada responsabilidade no padrao de projeto que lhe cabe, para que o fluxo principal nao precise conhecer os detalhes de cada subsistema.
 
-### Escopo do MVP
-- Agendar consulta — `POST /consultas`
-- Listar consultas — `GET /consultas`
-- Cancelar consulta — `DELETE /consultas/{id}`
+## Arquitetura
 
-### Como usar
+O fluxo segue um pipeline em camadas:
 
-**Pré-requisitos:** Java 21, Maven e Node.js.
+1. Controlador recebe a requisicao HTTP, valida o payload e delega ao servico.
+2. Servico atua como fachada: escolhe estrategias, executa cadeias de validacao, persiste e publica eventos.
+3. Estrategias isolam o calculo variavel (ex: taxa por meio de pagamento).
+4. Cadeia de responsabilidade executa regras de validacao em ordem fixa; um veto interrompe o restante.
+5. Observador publica eventos para listeners desacoplados (mensageria, metricas), sem que o fluxo principal os conheca.
+6. Registro unico mantem as transacoes em memoria na JVM.
 
-**Backend**
-```bash
+Operacoes monetarias usam `BigDecimal` com `HALF_EVEN` de duas casas, nunca `double`.
+
+## Tecnologias
+
+- Java 21
+- Spring Boot 3.4.3 (Web, Validation)
+- Maven
+- springdoc-openapi (Swagger UI / OpenAPI 3)
+- JUnit 5, Mockito, MockMvc
+- GitHub Actions (CI)
+
+Dependencias diretas do `pom.xml`:
+- sistema-agendamento-consultas
+- spring-boot-starter-web
+- spring-boot-starter-data-jpa
+- spring-boot-starter-validation
+- h2
+- spring-boot-starter-test
+
+
+## O que faz
+
+Projeto funcional, sistema-agendamento-consultas
+
+## Como rodar
+
+Requisitos: Java 21 e Maven.
+
+```
+./mvnw verify     # build e executa os testes
 ./mvnw spring-boot:run
-# ou: mvn spring-boot:run
+# API em http://localhost:8080
 ```
-A API sobe em `http://localhost:8080`.
 
-**Frontend**
-```bash
-cd frontend
-npm install
-npm run dev
+Se houver `application.yml`, ajuste a porta antes de rodar.
+
+## Estrutura do projeto
+
+- frontend/ (28 arquivo(s))
+- src/ (1 arquivo(s))
+- .gitignore, BRIEF.md, mvnw, mvnw.cmd, pom.xml, README.en.md, README.md
+
+
+## Trade-offs e decisões
+
+- Cadeia nova por requisicao: manter a cadeia como bean singleton fez regras de risco pararem de executar apos a primeira requisicao. A fabrica agora cria uma cadeia nova a cada pagamento.
+- `BigDecimal` para dinheiro, nunca `double`, com `HALF_EVEN` de duas casas.
+- API versionada e erros no formato RFC 7807 (ProblemDetail).
+- Sem banco de dados: o registro mantem transacoes em memoria para manter o foco nos padroes; a interface de repositorio deixa o caminho aberto para trocar por JPA sem mexer no servico.
+- Sem gateway externo: e uma simulacao honesta, nenhum pagamento real acontece.
+- Mensageria e metricas simuladas em memoria, expostas apenas pelo endpoint de observabilidade.
+
+## Limitações conhecidas
+
+- Historico em memoria: reiniciar a aplicacao apaga as transacoes.
+- Nao ha autenticacao nem autorizacao.
+- Mensageria e metricas nao integram provedores externos.
+- Listas e regras fixas no codigo (ex: lista restrita, limite de velocidade).
+
+## Testes
+
 ```
-O frontend roda em `http://localhost:5173` e encaminha `/consultas` para o backend em `:8080` (proxy do Vite, somente em desenvolvimento).
-
-### Endpoints
-
-| Método | Caminho | Descrição |
-|--------|---------|-----------|
-| `POST` | `/consultas` | Agendar consulta (body: `pacienteNome`, `tipo`, `dataHora`) |
-| `GET` | `/consultas` | Listar todas as consultas |
-| `DELETE` | `/consultas/{id}` | Cancelar consulta pelo ID |
-
-### Testes
-```bash
 ./mvnw test
 ```
-Resultado: **27 testes passando** (service 11, controller 9, repository 7), com build bem-sucedido.
 
-### Licença
-MIT
+O repositorio contem testes automatizados.
 
----
+## Licença
 
-## 🇺🇸 English (EN)
+Distribuído sob a licenca MIT. Consulte o arquivo `LICENSE` do repositorio.
 
-### Description
-Full-stack MVP for scheduling, listing, and cancelling medical appointments. The backend exposes a REST API in Java 21 with Spring Boot 3, Spring Data JPA, and Jakarta Validation, persisting to H2 (embedded database). The frontend is a React 18 app with TypeScript and Tailwind CSS, built with Vite.
+## Autor
 
-### MVP Scope
-- Schedule appointment — `POST /consultas`
-- List appointments — `GET /consultas`
-- Cancel appointment — `DELETE /consultas/{id}`
-
-### How to use
-
-**Prerequisites:** Java 21, Maven, and Node.js.
-
-**Backend**
-```bash
-./mvnw spring-boot:run
-# or: mvn spring-boot:run
-```
-The API starts at `http://localhost:8080`.
-
-**Frontend**
-```bash
-cd frontend
-npm install
-npm run dev
-```
-The frontend runs at `http://localhost:5173` and proxies `/consultas` to the backend on `:8080` (Vite dev proxy only).
-
-### Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/consultas` | Schedule appointment (body: `pacienteNome`, `tipo`, `dataHora`) |
-| `GET` | `/consultas` | List all appointments |
-| `DELETE` | `/consultas/{id}` | Cancel appointment by ID |
-
-### Tests
-```bash
-./mvnw test
-```
-Result: **27 tests passing** (service 11, controller 9, repository 7), successful build.
-
-### License
-MIT
-
----
-
-### Estrutura do projeto / Project structure
-```
-sistema-agendamento-consultas/
-├── pom.xml
-├── mvnw / mvnw.cmd
-├── src/main/java/...        # backend (controller, service, repository, dto, model, exception)
-├── src/test/java/...         # testes JUnit 5
-├── frontend/                 # frontend React + TypeScript + Tailwind (Vite)
-│   ├── package.json
-│   ├── src/
-│   │   ├── App.tsx, api.ts, types.ts
-│   │   ├── ConsultaList.tsx, ConsultaForm.tsx
-│   │   └── main.tsx, index.css
-│   └── dist/                 # build de produção
-├── README.md
-└── BRIEF.md
-```
+Kelvin Oliveira, https://github.com/KelvinOliveiraCode
+Portfolio: https://kelvinoliveiracode.github.io/portfolio/
